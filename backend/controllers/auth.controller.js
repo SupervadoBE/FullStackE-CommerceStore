@@ -66,6 +66,13 @@ export const signup = async (req, res) => {
     });
   } catch (error) {
     console.log("Error in signup controller: ", error.message);
+    if (error.name === "ValidationError") {
+      return res.status(400).json({
+        message: Object.values(error.errors)
+          .map((val) => val.message)
+          .join(", "),
+      });
+    }
     return res.status(500).json({ message: "Internal server error during registration." });
   }
 };
@@ -75,22 +82,20 @@ export const login = async (req, res) => {
     const { email, password } = req.body;
     const user = await User.findOne({ email });
 
-    const isMatch = await user.comparePassword(password);
-
-    if (user && isMatch) {
+    if (user && (await user.comparePassword(password))) {
       const { accessToken, refreshToken } = generateTokens(user._id);
 
       await storeRefreshToken(user._id, refreshToken);
       setCookies(res, accessToken, refreshToken);
 
-      res.json({
+      return res.json({
         _id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
       });
     } else {
-      res.status(401).json({ message: "Invalid credentials" });
+      return res.status(401).json({ message: "Invalid credentials" });
     }
   } catch (error) {
     console.log("Error in login controller", error.message);
