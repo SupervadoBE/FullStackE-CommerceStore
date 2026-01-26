@@ -22,7 +22,7 @@ router.get("/recommendations", getRecommendedProducts); // Temporary, to be repl
 
 router.post("/", protectRoute, adminRoute, createProduct);
 
-router.patch("/id", protectRoute, adminRoute, toggleFeaturedProduct);
+router.patch("/:id", protectRoute, adminRoute, toggleFeaturedProduct);
 
 router.delete("/:id", protectRoute, adminRoute, deleteProduct);
 
