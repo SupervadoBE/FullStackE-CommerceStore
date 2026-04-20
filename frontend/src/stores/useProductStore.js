@@ -72,4 +72,15 @@ export const useProductStore = create((set) => ({
       toast.error(error.response?.data?.message || "An error occurred while updating the product");
     }
   },
+
+  fetchFeaturedProducts: async () => {
+    set({ loading: true });
+    try {
+      const response = await axios.get("/products/featured");
+      set({ products: response.data, loading: false });
+    } catch (error) {
+      set({ loading: false });
+      toast.error(error.response?.data?.message || "An error occurred while fetching featured products");
+    }
+  }
 }));

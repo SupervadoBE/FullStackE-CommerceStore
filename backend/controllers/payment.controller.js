@@ -70,7 +70,7 @@ export const createCheckoutSession = async (req, res) => {
       await createNewCoupon(req.user._id);
     }
 
-    res.status(200).json({ id: session.id, totalAmount: totalAmount / 100 });
+    res.status(200).json({ id: session.id, totalAmount: totalAmount / 100, url: session.url });
   } catch (error) {
     console.error("Error in createCheckoutSession:", error);
     res.status(500).json({ message: "Server error", error: error.message });
@@ -85,6 +85,10 @@ export const checkoutSuccess = async (req, res) => {
     const session = await stripe.checkout.sessions.retrieve(sessionId);
 
     if (session.payment_status === "paid") {
+      const existingOrder = await Order.findOne({ stripeSessionId: sessionId });
+      if (existingOrder) {
+        return res.status(200).json({ success: true, message: "Order already processed.", orderId: existingOrder._id });
+      }
       if (session.metadata.couponCode) {
         // Mark coupon as used in your database
         await Coupon.findOneAndUpdate(
@@ -112,15 +116,24 @@ export const checkoutSuccess = async (req, res) => {
       });
 
       await newOrder.save();
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         message: "Payment successful, order created, and coupon deactivated if used.",
         orderId: newOrder._id,
       });
     }
+    return res.status(400).json({ success: false, message: "Payment not confirmed yet." });
   } catch (error) {
     console.log("Error processing successful checkout:", error);
-    res.status(500).json({ message: "Error processing successful checkout", error: error.message });
+    if (error.code === 11000) {
+      return res.status(200).json({
+        success: true,
+        message: "Order already exists (processed by parallel request).",
+      });
+    }
+    if (!res.headersSent) {
+      return res.status(500).json({ message: "Error processing successful checkout", error: error.message });
+    }
   }
 };
 
@@ -133,6 +146,7 @@ async function createStripeCoupon(discountPercentage) {
 }
 
 async function createNewCoupon(userId) {
+  await Coupon.findOneAndDelete({ userId }); // Ensure only one active coupon per user // * Kupon oluşturma işlemi, niyet aşamasında (checkout-session) değil, sonuç aşamasında (webhook veya checkout-success) yapılmalıdır.
   const newCoupon = new Coupon({
     code: "GIFT" + Math.random().toString(36).substring(2, 8).toUpperCase(),
     discountPercentage: 10,

@@ -15,11 +15,35 @@ const OrderSummary = () => {
   const formattedTotal = total.toFixed(2);
   const formattedSavings = savings.toFixed(2);
 
-  const handlePayment = async () => {
+
+  /*  Eski Yöntem: Stripe Checkout'a yönlendirme
+   const handlePayment = async () => {
     const stripe = await stripePromise;
     const res = await axios.post("/payments/create-checkout-session", { products: cart, coupon: coupon ? coupon.code : null });
     const session = res.data;
-    console.log("session is here :", session);
+    const result = await stripe.redirectToCheckout({ sessionId: session.id });
+    if(result.error) {
+      console.error(result.error);
+    }
+  };
+   */
+
+  const handlePayment = async () => {
+    try {
+      const res = await axios.post("payments/create-checkout-session", {
+        products: cart,
+        couponCode: coupon ? coupon.code : null,
+      });
+      const session = res.data
+
+      if(session.url) {
+        window.location.href =session.url;
+      } else {
+        console.error("Backend'den checkout URL'i gelmedi. Session nesnesini kontrol et.");
+      }
+    } catch (error) {
+      console.error("Checkout oturumu oluşturulurken hata oluştu:", error);
+    }
   };
 
   return (

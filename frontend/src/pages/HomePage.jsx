@@ -1,4 +1,7 @@
+import { useEffect } from "react";
 import CategoryItem from "../components/CategoryItem";
+import { useProductStore } from "../stores/useProductStore";
+import FeaturedProducts from "../components/FeaturedProducts";
 
 const categories = [
   { href: "/jeans", name: "Jeans", imageUrl: "/jeans.jpg" },
@@ -11,6 +14,20 @@ const categories = [
 ];
 
 const HomePage = () => {
+  const { fetchFeaturedProducts, products, isLoading } = useProductStore();
+
+  useEffect(() => {
+    fetchFeaturedProducts();
+  }, [fetchFeaturedProducts]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-16 w-16"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative min-h-screen text-white overflow-hidden">
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
@@ -22,6 +39,8 @@ const HomePage = () => {
             <CategoryItem category={category} key={category.name} />
           ))}
         </div>
+
+        { !isLoading && products.length > 0 && <FeaturedProducts featuredProducts={products} /> }
       </div>
     </div>
   );
